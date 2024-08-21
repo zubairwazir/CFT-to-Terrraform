@@ -1,0 +1,900 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Extracto",
+  "Parameters": {
+    "AMIID": {
+      "Type": "AWS::SSM:: Parameter::Value<AWS:: EC2:: Image::Id>",
+      "Default": "/nimbus/gold/linux/amazon-2",
+      "Description": "The SSM AMI to use"
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type for cluster.",
+      "Type": "String",
+      "Default": "c5.4xlarge"
+    },
+    "AZQuantity": {
+      "Description": "Number of availability zones to deploy into (1, 2 or 3).",
+      "Type": "Number",
+      "Default": "1"
+    },
+    "MinimumInstancesPerAZ": {
+      "Description": "Minimum of instances for each availability zone.",
+      "Type": "Number",
+      "Default": "1"
+    },
+    "DesiredInstancesPerAZ": {
+      "Description": "Desired number of instances for each availability zone.",
+      "Type": "Number",
+      "Default": "1"
+    },
+    "MaximumInstances PerAZ": {
+      "Description": "Maximum number of instances for each availability zone.",
+      "Type": "Number",
+      "Default": "2"
+    },
+    "NameTag": {
+      "Description": "Name resource tag",
+      "Type": "String",
+      "Default": "Polaris-Production-20240415-Extracto-Era"
+    },
+    "ClusterName": {
+      "Description": "Name of cluster",
+      "Type": "String",
+      "Default": "20240416"
+    },
+    "KeyName": {
+      "Description": "EC2 key pair for ssh access to instances",
+      "Type": "String",
+      "Default": "Polaris_PROD_ALL"
+    },
+    "Tenancy": {
+      "Description": "EC2 tenancy type ('default' or 'dedicated')",
+      "Type": "String",
+      "Default": "default"
+    },
+    "PreStartCommand": {
+      "Description": "Command to run before services are started",
+      "Type": "String",
+      "Default": ""
+    },
+    "Start": {
+      "Description": "Start services when install is complete? 'true' or 'false'",
+      "Type": "String",
+      "Default": "true"
+    },
+    "PostStartCommand": {
+      "Description": "Command to run after services are started",
+      "Type": "String",
+      "Default": ""
+    },
+    "EncryptedConnections": {
+      "Description": "Encrypt all connections? 'true' or 'false'",
+      "Type": "String",
+      "Default": "true"
+    },
+    "VPCId": {
+      "Description": "VPC Id to deploy into.",
+      "Type": "AWS:: EC2::VPC::Id",
+      "Default": "vpc-6977590e"
+    },
+    "Subnet1Id": {
+      "Description": "First subnet to deploy into (required).",
+      "Type": "AWS:: EC2::Subnet::Id",
+      "Default": "subnet-8ee648c7"
+    },
+    "Subnet2Id": {
+      "Description": "Second subnet to deploy into (required if AZQuantity = 2 or 3).",
+      "Type": "String",
+      "Default": "subnet-4db54816"
+    },
+    "Subnet3Id": {
+      "Description": "Third subnet to deploy into (required if AZQuantity = 3).",
+      "Type": "String",
+      "Default": "subnet-aa3ac587"
+    },
+    "Subnet4Id": {
+      "Description": "Third subnet to deploy into (required if AZQuantity = 4).",
+      "Type": "String",
+      "Default": "*"
+    },
+    "SQSASgAlert1a": {
+      "Description": "Queue to send alert messages to upload logs for az - 1a",
+      "Type": "String",
+      "Default": "arn:aws: sqs:us-east-1:146637533799: polaris-log-uploader-Era-prod-Extracto-1a"
+    },
+    "SQSASgAlert1b": {
+      "Description": "Queue to send alert messages to upload logs for az - 1b",
+      "Type": "String",
+      "Default": "arn: aws: sqs:us-east-1:146637533799: polaris-log-uploader-Era-prod-Extracto-1b"
+    },
+    "EncryptedStorageKeyId": {
+      "Description": "KMS Key Id for encrypted storage (if empty storage is not encrypted).",
+      "Type": "String",
+      "Default": ""
+    },
+    "SecurityGroupId": {
+      "Description": "Custom / production security group (if empty all ports will be open to everywhere).",
+      "Type": "String",
+      "Default": ""
+    },
+    "IAMROLeName": {
+      "Description": "Custom / production IAM role (if empty the DEV-EC2-Role will be used which has full privs).",
+      "Type": "String",
+      "Default": "Polaris-Radagast"
+    },
+    "InstanceProfile": {
+      "Type": "String",
+      "Default": "Polaris-Radagast",
+      "Description": "Optional: If provided, it will be used; else a new InstanceProfile for the IAM Role will be created."
+    },
+    "CommonConfiguration": {
+      "Description": "53 location 'bucket/.../config' to an object that declares cluster(s) and consumer(s) for all nodes in the cluster.",
+      "Type": "String",
+      "Default": ""
+    },
+    "Truststore": {
+      "Description": "53 location 'bucket/.../truststore' to JKS truststore for connections to Merlin (Cassandra) and Angelo (ActiveMQ).",
+      "Type": "String",
+      "Default": "polaris-chc-prod-datasolutions/emdeon-polaris-production-7526-us-east-1/extracto/ssl/extracto.truststore"
+    },
+    "TruststorePassword": {
+      "Description": "Truststore password.",
+      "Type": "String",
+      "Default": "KnbEgd0NY6ZID7t",
+      "NoEcho": "true"
+    },
+    "Keystore": {
+      "Description": "53 location 'bucket/.../keystore' to JKS keystore for encrypting connections to the Reddo cluster.",
+      "Type": "String",
+      "Default": "polaris-chc-prod-datasolutions/emdeon-polaris-production-7526-us-east-1/extracto/ssl/extracto.keystore"
+    },
+    "KeystorePassword": {
+      "Description": "Keystore password.",
+      "Type": "String",
+      "Default": "1NucQo900PpqEnS",
+      "NoEcho": "true"
+    },
+    "AngeloTruststore": {
+      "Description": "53 location 'bucket/.../keystore' to JKS keystore for encrypting connections to the Angelo",
+      "Type": "String",
+      "Default": "*"
+    },
+    "AngeloTruststorePassword": {
+      "Description": "AngeloTruststorePassword password.",
+      "Type": "String",
+      "Default": "",
+      "NoEcho": "true"
+    },
+    "AngeloPolarisPassword": {
+      "Description": "AngeloPolaris Password password.",
+      "Type": "String",
+      "Default": "",
+      "NoEcho": "true"
+    },
+    "ProsperoTruststore": {
+      "Description": "53 location 'bucket/.../keystore' to JKS keystore for encrypting connections to the Prospero",
+      "Type": "String",
+      "Default": "polaris-chc-prod-datasolutions/emdeon-polaris-production-7526-us-east-1/prospero/ssl/prospero.truststore"
+    },
+    "ProsperoTruststorePassword": {
+      "Description": "ProsperoTruststorePassword password.",
+      "Type": "String",
+      "Default": "KnbEgd0NY6ZID7t",
+      "NoEcho": "true"
+    },
+    "ProsperoPolarisPassword": {
+      "Description": "ProsperoPolaris Password password.",
+      "Type": "String",
+      "Default": "N1zPlaKTtFBlivK",
+      "NoEcho": "true"
+    },
+    "ProsperoClusterName": {
+      "Description": "ProsperoClustername for the current stack.",
+      "Type": "String",
+      "Default": "",
+      "NoEcho": "true"
+    },
+    "TrendPolicyId": {
+      "Description": "Policy ID to activate for Trend Deep Security.",
+      "Type": "Number",
+      "Default": "741"
+    },
+    "TrendTenantId": {
+      "Description": "Tenant ID for Trend Deep Security.",
+      "Type": "String",
+      "Default": "831A0C94-869E-79E6-1AE3-114A69544CC8"
+    },
+    "TrendTenantPassword": {
+      "Description": "Tenant password for Trend Deep Security.",
+      "Type": "String",
+      "NoEcho": "true",
+      "Default": "418874C4-E21F-7466-85AE-CAB64DE3E20E"
+    },
+    "AngeloSslUrl": {
+      "Description": "Angelo ssl url.",
+      "Type": "String",
+      "NoEcho": "true",
+      "Default": ""
+    },
+    "ProsperoServiceUrl": {
+      "Description": "Prospero service Url",
+      "Type": "String",
+      "NoEcho": "true",
+      "Default": "https://internal-Polaris-P-Prospero-1MMC0A26E4L7-1142668064.us-east-1.elb.amazonaws.com:8443/prospero"
+    },
+    "Environment": {
+      "Description": "Environment designator, 'dev' or 'prod'.",
+      "Type": "String",
+      "Default": "prod"
+    },
+    "BucketName": {
+      "Description": "BucketName.",
+      "Type": "String",
+      "Default": "polaris-chc-prod-datasolutions"
+    },
+    "AlertSNSARN": {
+      "Description": "ARN of SNS for notification",
+      "Type": "String",
+      "Default": "arn: aws: sns: us-east-1:442119052822:MonitoringEventsCommon"
+    }
+  },
+  "Conditions": {
+    "IsRegionEast": {
+      "Fn::Equals": [
+        {
+          "Ref": "AWS::Region"
+        },
+        "us-east-1"
+      ]
+    },
+    "InputInstanceProfileIsEmpty": {
+      "Fn::Equals": [
+        {
+          "Ref": "InstanceProfile"
+        },
+        ""
+      ]
+    },
+    "UseKeyName": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "KeyName"
+            },
+            ""
+          ]
+        }
+      ]
+    },
+    "UseCustomAmiId": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AMIId"
+            },
+            ""
+          ]
+        }
+      ]
+    },
+    "UseAsg2": {
+      "Fn::Or": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AZQuantity"
+            },
+            "2"
+          ]
+        },
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AZQuantity"
+            },
+            "3"
+          ]
+        }
+      ]
+    },
+    "UseAsg3": {
+      "Fn::Equals": [
+        {
+          "Ref": "AZQuantity"
+        },
+        "3"
+      ]
+    },
+    "UseAsg4": {
+      "Fn::Equals": [
+        {
+          "Ref": "AZQuantity"
+        },
+        "4"
+      ]
+    },
+    "UseExtractoSecurityGroup": {
+      "Fn::Equals": [
+        {
+          "Ref": "SecurityGroupId"
+        },
+        ""
+      ]
+    },
+    "UseExtractoIAMRole": {
+      "Fn::Equals": [
+        {
+          "Ref": "IAMRoleName"
+        },
+        ""
+      ]
+    }
+  },
+  "Resources": {
+    "ExtractoSecurityGroup": {
+      "Type": "AWS:: EC2::SecurityGroup",
+      "Condition": "UseExtractoSecurityGroup",
+      "Metadata": {
+        "Comment": "443-Trend Deep Security, 61616-Angelo,61617-Angelo"
+      },
+      "Properties": {
+        "GroupDescription": "Extracto stack security group",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "icmp",
+            "FromPort": "-1",
+            "ToPort": "-1",
+            "CidrIp": "10.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "10.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "61616",
+            "ToPort": "61616",
+            "CidrIp": "10.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "61617",
+            "ToPort": "61617",
+            "CidrIp": "10.0.0.0/8"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "FromPort": "0",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "VpcId": {
+          "Ref": "VPCId"
+        }
+      }
+    },
+    "ExtractoLaunchConfig": {
+      "Type": "AWS::AutoScaling:: LaunchConfiguration",
+      "Metadata": {
+        "AWS::CloudFormation::Authentication": {
+          "RoleBasedAccess": {
+            "type": "S3",
+            "buckets": [
+              {
+                "Fn::Join": [
+                  "",
+                  [
+                    "emdeon-dev",
+                    "-",
+                    {
+                      "Ref": "AWS::Region"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roleName": "DEV-EC2-Role"
+          }
+        },
+        "AWS::CloudFormation::Init": {
+          "configSets": {
+            "Extracto": ["Extracto"]
+          },
+          "Extracto": {
+            "commands": {
+              "01: get Extracto client": {
+                "command": "aws s3 cp s3://polaris-chc-prod-datasolutions/nessusagent/nessusagent.sh ; chmod 766 nessusagent.sh; ./nessusagent.sh; yum update -y;"
+              },
+              "02: install Extracto": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "export stack_id=\"",
+                      {
+                        "Ref": "AWS::StackId"
+                      },
+                      "\"; export stack_name=\"",
+                      {
+                        "Ref": "AWS::StackName"
+                      },
+                      "\"; export cluster_name=\"",
+                      {
+                        "Ref": "ClusterName"
+                      },
+                      "\"; export az_quantity=\"",
+                      {
+                        "Ref": "AZQuantity"
+                      },
+                      "\"; export minimum_instances_per_az=\"",
+                      {
+                        "Ref": "MinimumInstancesPerAZ"
+                      },
+                      "\"; export desired_instances_per_az=\"",
+                      {
+                        "Ref": "DesiredInstancesPerAZ"
+                      },
+                      "\"; export maximum_instances_per_az=\"",
+                      {
+                        "Ref": "MaximumInstancesPerAZ"
+                      },
+                      "\"; export region=\"",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "\"; export start=\"",
+                      {
+                        "Ref": "Start"
+                      },
+                      "\"; export pre_start_command=\"",
+                      {
+                        "Ref": "PreStartCommand"
+                      },
+                      "\"; export post_start_command=\"",
+                      {
+                        "Ref": "PostStartCommand"
+                      },
+                      "\"; export encrypted_connections=\"",
+                      {
+                        "Ref": "EncryptedConnections"
+                      },
+                      "\"; export encrypted_storage_keyid=\"",
+                      {
+                        "Ref": "EncryptedStorageKeyId"
+                      },
+                      "\"; export common_configuration=\"",
+                      {
+                        "Ref": "CommonConfiguration"
+                      },
+                      "\"; export truststore=\"",
+                      {
+                        "Ref": "Truststore"
+                      },
+                      "\"; export truststore_password=\"",
+                      {
+                        "Ref": "TruststorePassword"
+                      },
+                      "\"; export keystore=\"",
+                      {
+                        "Ref": "Keystore"
+                      },
+                      "\"; export angelo_truststore=\"",
+                      {
+                        "Ref": "AngeloTruststore"
+                      },
+                      "\"; export angelo_truststore_password=\"",
+                      {
+                        "Ref": "AngeloTruststorePassword"
+                      },
+                      "\"; export angelo_polaris_password=\"",
+                      {
+                        "Ref": "AngeloPolaris Password"
+                      },
+                      "\"; export prospero_truststore=\"",
+                      {
+                        "Ref": "ProsperoTruststore"
+                      },
+                      "\"; export prospero_truststore_password=\"",
+                      {
+                        "Ref": "ProsperoTruststorePassword"
+                      },
+                      "\"; export prospero_polaris_password=\"",
+                      {
+                        "Ref": "ProsperoPolaris Password"
+                      },
+                      "\"; export prospero_cluster_name=\"",
+                      {
+                        "Ref": "ProsperoClusterName"
+                      },
+                      "\"; export trend_policy_id=\"",
+                      {
+                        "Ref": "TrendPolicyId"
+                      },
+                      "\"; export trend_tenant_id=\"",
+                      {
+                        "Ref": "TrendTenantId"
+                      },
+                      "\"; export trend_tenant_password=\"",
+                      {
+                        "Ref": "TrendTenantPassword"
+                      },
+                      "\"; export angelo_ssl_url=\"",
+                      {
+                        "Ref": "AngeloSslUrl"
+                      },
+                      "\"; export prospero_sevice_url=\"",
+                      {
+                        "Ref": "ProsperoServiceUrl"
+                      },
+                      "\"; export environment=\"",
+                      {
+                        "Ref": "Environment"
+                      },
+                      "\"; export bucket_name=\"",
+                      {
+                        "Ref": "BucketName"
+                      },
+                      "\";cd /opt/polaris/client; /opt/polaris/client/extracto"
+                    ]
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "AssociatePublic IpAddress": false,
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "IamInstanceProfile": {
+          "Ref": "InstanceProfile"
+        },
+        "SecurityGroups": [
+          {
+            "Fn::If": [
+              "UseExtractoSecurityGroup",
+              {
+                "Ref": "ExtractoSecurityGroup"
+              },
+              {
+                "Ref": "SecurityGroupId"
+              }
+            ]
+          }
+        ],
+        "Placement Tenancy": {
+          "Ref": "Tenancy"
+        },
+        "MetadataOptions": {
+          "HttpEndpoint": "enabled",
+          "HttpTokens": "required"
+        },
+        "KeyName": {
+          "Fn::If": [
+            "UseKeyName",
+            {
+              "Ref": "KeyName"
+            },
+            {
+              "Ref": "AWS::NoValue"
+            }
+          ]
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sdc",
+            "VirtualName": "ephemeral0"
+          },
+          {
+            "DeviceName": "/dev/sdd",
+            "VirtualName": "ephemeral1"
+          },
+          {
+            "DeviceName": "/dev/sde",
+            "VirtualName": "ephemeral2"
+          },
+          {
+            "DeviceName": "/dev/sdf",
+            "VirtualName": "ephemeral3"
+          },
+          {
+            "DeviceName": "/dev/sdg",
+            "VirtualName": "ephemeral4"
+          },
+          {
+            "DeviceName": "/dev/sdh",
+            "VirtualName": "ephemeral5"
+          },
+          {
+            "DeviceName": "/dev/sdi",
+            "VirtualName": "ephemeral6"
+          },
+          {
+            "DeviceName": "/dev/sdj",
+            "VirtualName": "ephemeral7"
+          },
+          {
+            "DeviceName": "/dev/xvdm",
+            "Ebs": {
+              "VolumeSize": "50",
+              "DeleteOnTermination": "true",
+              "Encrypted": "true",
+              "VolumeType": "gp2",
+              "Iops": 1000
+            }
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -v\n",
+                "yum -y update\n",
+                "yum -y install awslogs\n",
+                "yum -y update\n",
+                "cat > /etc/aws logs/aws logs.conf <<<EOF\n",
+                "[general]\n",
+                "state_file = /var/lib/awslogs/agent-state\n",
+                "[var/log/]\n",
+                "datetime_format = b %d %H:%M:%S\n",
+                "file = ",
+                "\n",
+                "buffer_duration = 5000\n",
+                "initial_position= start_of_file\n",
+                "log_group_name = ",
+                "\n",
+                "log_stream_name = {instance_id}\n",
+                "EOF\n",
+                "systemctl start awslogsd\n",
+                "systemctl enable awslogsd\n",
+                "curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip; unzip awscliv2.zip; ./awscli-exe-linux-x86_64/aws/install -i /usr/local",
+                "TOKEN=$(curl -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 120\")\n",
+                "instance_id=$(curl -H \"X-aws-ec2-metadata-token: $TOKEN\" -v http://169.254.169.254/latest/meta-data/instance-id)\n",
+                "az=$(curl -H \"X-aws-ec2-metadata-token: $TOKEN\" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)\n",
+                "region=${az:0:${#az}-1}\n",
+                "/opt/aws/bin/cfn-init -c Extracto --stack ",
+                {
+                  "Ref": "AWS::StackId"
+                },
+                "--resource ExtractoLaunchConfig",
+                "--region",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n",
+                "asg=$(aws ec2 describe-instances --region $region --instance-ids $instance_id --query 'Reservations []. Instances []. Tags [?key==`aws: cloud formation:login",
+                "/opt/aws/bin/cfn-signal -e $? --stack",
+                {
+                  "Ref": "AWS::StackId"
+                },
+                "--resource $asg",
+                "--region",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "ExtractoTopic": {
+      "Type": "AWS:: SNS:: Topic",
+      "Properties": {
+        "KmsMasterKeyId": "d82fa3dc-2168-4d9e-b2cb-5c5e3b45d935",
+        "Subscription": [
+          {
+            "Endpoint": {
+              "Ref": "SQSASgAlert1a"
+            },
+            "Protocol": "sqs"
+          },
+          {
+            "Endpoint": {
+              "Ref": "SQSAsgAlert1b"
+            },
+            "Protocol": "sqs"
+          }
+        ],
+        "TopicName": {
+          "Ref": "AWS::StackName"
+        },
+        "Tags": [
+          {
+            "Key": "Billing",
+            "Value": "DataSolutions/Polaris"
+          },
+          {
+            "Key": "APP_ID",
+            "Value": "842"
+          },
+          {
+            "Key": "COST_CENTER",
+            "Value": "40139"
+          }
+        ]
+      }
+    },
+    "ExtractoAutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "HealthCheckType": "EC2",
+        "LaunchConfigurationName": {
+          "Ref": "ExtractoLaunchConfig"
+        },
+        "MinSize": { "Ref": "MinimumInstances PerAZ" },
+        "DesiredCapacity": {
+          "Ref": "DesiredInstancesPerAZ"
+        },
+        "MaxSize": {
+          "Ref": "MaximumInstancesPerAZ"
+        },
+        "ServiceLinkedRoleARN": "arn:aws:iam:: 146637533799: role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling_Polaris",
+        "TerminationPolicies": [
+          "Closest ToNextInstanceHour",
+          "OldestInstance",
+          "Default"
+        ],
+        "VPCZoneIdentifier": [
+          {
+            "Ref": "Subnet1Id"
+          },
+          {
+            "Ref": "Subnet2Id"
+          }
+        ],
+        "NotificationConfigurations": [
+          {
+            "TopicARN": "arn: aws: sns:us-east-1:146637533799: polaris-prod-asg-notifications",
+            "NotificationTypes": [
+              "autoscaling: EC2_INSTANCE_LAUNCH",
+              "autoscaling: EC2_INSTANCE_LAUNCH_ERROR",
+              "autoscaling: EC2_INSTANCE_TERMINATE_ERROR",
+              "autoscaling: EC2_INSTANCE_TERMINATE"
+            ]
+          }
+        ]
+      },
+      "CreationPolicy": {
+        "ResourceSignal": {
+          "Count": {
+            "Ref": "Desired Instances PerAZ"
+          },
+          "Timeout": "PT60M"
+        }
+      }
+    },
+    "ExtractoLifecycleHook": {
+      "Type": "AWS::AutoScaling:: LifecycleHook",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "ExtractoAutoScalingGroup"
+        },
+        "LifecycleTransition": "autoscaling: EC2_INSTANCE_TERMINATING",
+        "NotificationTargetARN": {
+          "Ref": "ExtractoTopic"
+        },
+        "DefaultResult": "CONTINUE",
+        "HeartbeatTimeout": 600,
+        "RoleARN": "arn: aws: iam:: 146637533799: role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling_Polaris"
+      }
+    },
+    "ExtractoScalingPolicy": {
+      "Type": "AWS::AutoScaling::Scaling Policy",
+      "Properties": {
+        "AdjustmentType": "ExactCapacity",
+        "AutoScalingGroupName": {
+          "Ref": "ExtractoAutoScalingGroup"
+        },
+        "PolicyType": "StepScaling",
+        "MetricAggregationType": "Average",
+        "EstimatedInstanceWarmup": "120",
+        "StepAdjustments": [
+          {
+            "MetricInterval LowerBound": "0",
+            "MetricIntervalUpperBound": "200",
+            "ScalingAdjustment": "1"
+          },
+          {
+            "MetricInterval LowerBound": "200",
+            "ScalingAdjustment": "2"
+          }
+        ]
+      }
+    },
+    "ExtractoClusterResizeAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "EvaluationPeriods": "1",
+        "Statistic": "Minimum",
+        "Threshold": "0",
+        "AlarmDescription": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              " SQS extracto outbound translator message count gone up/down hence resizing the cluster"
+            ]
+          ]
+        },
+        "Period": "300",
+        "AlarmActions": [
+          {
+            "Ref": "ExtractoScalingPolicy"
+          }
+        ],
+        "Namespace": "ClusterResize",
+        "Dimensions": [
+          {
+            "Name": "AutoscalingGroup",
+            "Value": {
+              "Ref": "ExtractoAutoScalingGroup"
+            }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "MetricName": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS:: StackName"
+              },
+              "-SQSMessageCount"
+            ]
+          ]
+        }
+      }
+    },
+    "ExtractoServiceAlarm": {
+      "Type": "AWS::CloudWatch:: Alarm",
+      "Properties": {
+        "AlarmDescription": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "Service alarm for unhealthy host"
+            ]
+          ]
+        },
+        "AlarmActions": [
+          {
+            "Ref": "AlertSNSARN"
+          }
+        ],
+        "MetricName": "ExtractoRunningCount",
+        "Namespace": "ExtractoService",
+        "Statistic": "Minimum",
+        "Period": "300",
+        "EvaluationPeriods": "1",
+        "Threshold": "0",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "Dimensions": [
+          {
+            "Name": "AutoscalingGroup",
+            "Value": "ExtractoAutoScalingGroup"
+          }
+        ]
+      }
+    }
+  }
+}
