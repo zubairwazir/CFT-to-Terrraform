@@ -3,7 +3,7 @@
   "Description": "Extracto",
   "Parameters": {
     "AMIID": {
-      "Type": "AWS::SSM:: Parameter::Value<AWS:: EC2:: Image::Id>",
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
       "Default": "/nimbus/gold/linux/amazon-2",
       "Description": "The SSM AMI to use"
     },
@@ -27,7 +27,7 @@
       "Type": "Number",
       "Default": "1"
     },
-    "MaximumInstances PerAZ": {
+    "MaximumInstancesPerAZ": {
       "Description": "Maximum number of instances for each availability zone.",
       "Type": "Number",
       "Default": "2"
@@ -74,12 +74,12 @@
     },
     "VPCId": {
       "Description": "VPC Id to deploy into.",
-      "Type": "AWS:: EC2::VPC::Id",
+      "Type": "AWS::EC2::VPC::Id",
       "Default": "vpc-6977590e"
     },
     "Subnet1Id": {
       "Description": "First subnet to deploy into (required).",
-      "Type": "AWS:: EC2::Subnet::Id",
+      "Type": "AWS::EC2::Subnet::Id",
       "Default": "subnet-8ee648c7"
     },
     "Subnet2Id": {
@@ -117,7 +117,7 @@
       "Type": "String",
       "Default": ""
     },
-    "IAMROLeName": {
+    "IAMRoleName": {
       "Description": "Custom / production IAM role (if empty the DEV-EC2-Role will be used which has full privs).",
       "Type": "String",
       "Default": "Polaris-Radagast"
@@ -334,7 +334,7 @@
   },
   "Resources": {
     "ExtractoSecurityGroup": {
-      "Type": "AWS:: EC2::SecurityGroup",
+      "Type": "AWS::EC2::SecurityGroup",
       "Condition": "UseExtractoSecurityGroup",
       "Metadata": {
         "Comment": "443-Trend Deep Security, 61616-Angelo,61617-Angelo"
@@ -381,7 +381,7 @@
       }
     },
     "ExtractoLaunchConfig": {
-      "Type": "AWS::AutoScaling:: LaunchConfiguration",
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Metadata": {
         "AWS::CloudFormation::Authentication": {
           "RoleBasedAccess": {
@@ -495,7 +495,7 @@
                       },
                       "\"; export angelo_polaris_password=\"",
                       {
-                        "Ref": "AngeloPolaris Password"
+                        "Ref": "AngeloPolarisPassword"
                       },
                       "\"; export prospero_truststore=\"",
                       {
@@ -507,7 +507,7 @@
                       },
                       "\"; export prospero_polaris_password=\"",
                       {
-                        "Ref": "ProsperoPolaris Password"
+                        "Ref": "ProsperoPolarisPassword"
                       },
                       "\"; export prospero_cluster_name=\"",
                       {
@@ -693,7 +693,7 @@
       }
     },
     "ExtractoTopic": {
-      "Type": "AWS:: SNS:: Topic",
+      "Type": "AWS::SNS::Topic",
       "Properties": {
         "KmsMasterKeyId": "d82fa3dc-2168-4d9e-b2cb-5c5e3b45d935",
         "Subscription": [
@@ -743,7 +743,7 @@
         "MaxSize": {
           "Ref": "MaximumInstancesPerAZ"
         },
-        "ServiceLinkedRoleARN": "arn:aws:iam:: 146637533799: role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling_Polaris",
+        "ServiceLinkedRoleARN": "arn:aws:iam::146637533799: role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling_Polaris",
         "TerminationPolicies": [
           "Closest ToNextInstanceHour",
           "OldestInstance",
@@ -779,7 +779,7 @@
       }
     },
     "ExtractoLifecycleHook": {
-      "Type": "AWS::AutoScaling:: LifecycleHook",
+      "Type": "AWS::AutoScaling::LifecycleHook",
       "Properties": {
         "AutoScalingGroupName": {
           "Ref": "ExtractoAutoScalingGroup"
@@ -790,7 +790,7 @@
         },
         "DefaultResult": "CONTINUE",
         "HeartbeatTimeout": 600,
-        "RoleARN": "arn: aws: iam:: 146637533799: role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling_Polaris"
+        "RoleARN": "arn: aws: iam::146637533799: role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling_Polaris"
       }
     },
     "ExtractoScalingPolicy": {
@@ -854,7 +854,7 @@
             "",
             [
               {
-                "Ref": "AWS:: StackName"
+                "Ref": "AWS::StackName"
               },
               "-SQSMessageCount"
             ]
@@ -863,7 +863,7 @@
       }
     },
     "ExtractoServiceAlarm": {
-      "Type": "AWS::CloudWatch:: Alarm",
+      "Type": "AWS::CloudWatch::Alarm",
       "Properties": {
         "AlarmDescription": {
           "Fn::Join": [
