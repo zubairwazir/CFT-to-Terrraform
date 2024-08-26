@@ -135,6 +135,116 @@ resource "aws_autoscaling_notification" "extracto_launch_config" {
   // "]))
 }
 
+
+resource "aws_launch_configuration" "extracto_launch_config" {
+  name_prefix   = "extracto-lc-"
+  image_id      = var.ami_id
+  instance_type = var.instance_type
+
+  associate_public_ip_address = false
+  iam_instance_profile        = var.instance_profile
+  key_name                    = local.UseKeyName ? var.key_name : null
+
+  security_groups = [
+    local.UseExtractoSecurityGroup ? aws_security_group.extracto_security_group[0].id : var.security_group_id
+  ]
+
+  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+    stack_id                     = local.stack_id,
+    stack_name                   = local.stack_name,
+    cluster_name                 = var.cluster_name,
+    az_quantity                  = var.az_quantity,
+    minimum_instances_per_az     = var.minimum_instances_per_az,
+    desired_instances_per_az     = var.desired_instances_per_az,
+    maximum_instances_per_az     = var.maximum_instances_per_az,
+    region                       = data.aws_region.current.name,
+    start                        = var.start,
+    pre_start_command            = var.pre_start_command,
+    post_start_command           = var.post_start_command,
+    encrypted_connections        = var.encrypted_connections,
+    encrypted_storage_keyid      = var.encrypted_storage_keyid,
+    common_configuration         = var.common_configuration,
+    truststore                   = var.truststore,
+    truststore_password          = var.truststore_password,
+    keystore                     = var.keystore,
+    angelo_truststore            = var.angelo_truststore,
+    angelo_truststore_password   = var.angelo_truststore_password,
+    angelo_polaris_password      = var.angelo_polaris_password,
+    prospero_truststore          = var.prospero_truststore,
+    prospero_truststore_password = var.prospero_truststore_password,
+    prospero_polaris_password    = var.prospero_polaris_password,
+    prospero_cluster_name        = var.prospero_cluster_name,
+    trend_policy_id              = var.trend_policy_id,
+    trend_tenant_id              = var.trend_tenant_id,
+    trend_tenant_password        = var.trend_tenant_password,
+    angelo_ssl_url               = var.angelo_ssl_url,
+    prospero_service_url         = var.prospero_service_url,
+    environment                  = var.environment,
+    bucket_name                  = var.bucket_name
+  }))
+
+  root_block_device {
+    volume_type           = "gp2"
+    volume_size           = 50
+    delete_on_termination = true
+    encrypted             = true
+    iops                  = 1000
+  }
+
+  ebs_block_device {
+    device_name           = "/dev/xvdm"
+    volume_type           = "gp2"
+    volume_size           = 50
+    delete_on_termination = true
+    encrypted             = true
+    iops                  = 1000
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdc"
+    virtual_name = "ephemeral0"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdd"
+    virtual_name = "ephemeral1"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sde"
+    virtual_name = "ephemeral2"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdf"
+    virtual_name = "ephemeral3"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdg"
+    virtual_name = "ephemeral4"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdh"
+    virtual_name = "ephemeral5"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdi"
+    virtual_name = "ephemeral6"
+  }
+
+  ephemeral_block_device {
+    device_name  = "/dev/sdj"
+    virtual_name = "ephemeral7"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 resource "aws_autoscaling_lifecycle_hook" "extracto_lifecycle_hook" {
   name                   = "extracto-lifecycle-hook"
   autoscaling_group_name = aws_autoscaling_group.extracto_auto_scaling_group.id
