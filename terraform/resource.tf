@@ -162,7 +162,7 @@ resource "aws_launch_configuration" "extracto_launch_config" {
     pre_start_command            = var.pre_start_command,
     post_start_command           = var.post_start_command,
     encrypted_connections        = var.encrypted_connections,
-    encrypted_storage_keyid      = var.encrypted_storage_keyid,
+    encrypted_storage_keyid      = var.encrypted_storage_key_id
     common_configuration         = var.common_configuration,
     truststore                   = var.truststore,
     truststore_password          = var.truststore_password,
